@@ -1,0 +1,70 @@
+name: qq-memory-addon
+services:
+  memory-graph:
+    image: neo4j:2026.09.0
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: none
+      NEO4J_server_memory_heap_initial__size: 256m
+      NEO4J_server_memory_heap_max__size: 512m
+      NEO4J_server_memory_pagecache_size: 256m
+      NEO4J_dbms_usage__report_enabled: "false"
+    networks: [state]
+    volumes: ["graph_data:/data", "graph_logs:/logs"]
+    mem_limit: 1536m
+    cpus: 2
+    pids_limit: 256
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: [CMD-SHELL, "cypher-shell -a bolt://localhost:7687 'RETURN 1' >/dev/null"]
+      interval: 15s
+      timeout: 10s
+      retries: 6
+      start_period: 40s
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "2"}
+  memory-service:
+    build: {context: .., dockerfile: deploy/Dockerfile.memory}
+    image: ${MEMORY_IMAGE:-qqmemory:local}
+    restart: unless-stopped
+    depends_on:
+      memory-graph: {condition: service_healthy}
+    env_file: ["${MEMORY_STATE_DIR:-/srv/qqbot/memory}/memory.env"]
+    environment:
+      MEMORY_TOKEN_FILE: /run/secrets/memory_token
+      DEEPSEEK_API_KEY_FILE: /run/secrets/deepseek_api_key
+      GRAPH_URI: bolt://memory-graph:7687
+      EMBEDDING_PATH: /models/embedding
+    secrets: [memory_token, deepseek_api_key]
+    networks: [link, state, egress]
+    volumes:
+      - ${MEMORY_STATE_DIR:-/srv/qqbot/memory}/models:/models:ro
+      - memory_state:/data
+    read_only: true
+    tmpfs: ["/tmp:size=128m,nosuid,nodev"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 5g
+    cpus: 2
+    pids_limit: 128
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8083/healthz',timeout=5)"]
+      interval: 30s
+      timeout: 8s
+      retries: 4
+      start_period: 90s
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "2"}
+networks:
+  link: {name: qq_memory_link, internal: true}
+  state: {internal: true}
+  egress: {}
+volumes:
+  graph_data: {external: true, name: qq-memory-addon_graph_data}
+  graph_logs: {external: true, name: qq-memory-addon_graph_logs}
+  memory_state: {external: true, name: qq-memory-addon_memory_state}
+secrets:
+  memory_token: {file: "${MEMORY_STATE_DIR:-/srv/qqbot/memory}/secrets/memory_token"}
+  deepseek_api_key: {file: "${BOT_STATE_DIR:-/srv/qqbot/bot}/secrets/deepseek_api_key"}

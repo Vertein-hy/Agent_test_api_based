@@ -1,0 +1,13 @@
+{
+  "capability": "read_only",
+  "module": "current_time",
+  "function": {
+    "name": "current_time",
+    "description": "读取当前北京时间与日期，无输入参数，仅返回时间数据。",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,76 @@
+name: qq-yunzai-addon
+services:
+  yunzai-bridge:
+    build: {context: .., dockerfile: deploy/Dockerfile.panel}
+    image: qq-yunzai-addon:local
+    restart: unless-stopped
+    depends_on:
+      yunzai-redis:
+        condition: service_healthy
+    environment:
+      HOME: /tmp
+      XDG_CONFIG_HOME: /tmp/.config
+      XDG_CACHE_HOME: /tmp/.cache
+      YUNZAI_TOKEN_FILE: /run/secrets/yunzai_token
+      YUNZAI_COMMIT: 79a79c3defd9111429cd1da2acd120f22e68aa29
+      MIAO_COMMIT: 0771a0e827bc51dfb6c8df50d797447e1aae7ba7
+    secrets: [yunzai_token]
+    networks: [link, state, egress]
+    read_only: true
+    tmpfs: ["/tmp:size=128m,nosuid,nodev"]
+    volumes:
+      - yunzai_data:/app/data
+      - yunzai_temp:/app/temp
+      - yunzai_logs:/app/logs
+      - yunzai_config:/app/config/config
+      - miao_config:/app/plugins/miao-plugin/config
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 1536m
+    cpus: 2
+    pids_limit: 256
+    shm_size: 128m
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8082/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "2"}
+  yunzai-redis:
+    image: qq-yunzai-addon:local
+    working_dir: /data
+    restart: unless-stopped
+    command: [redis-server, --bind, 0.0.0.0, --protected-mode, "no", --appendonly, "yes", --save, "", --maxmemory, 96mb, --maxmemory-policy, allkeys-lru]
+    networks: [state]
+    volumes: ["redis_data:/data"]
+    mem_limit: 128m
+    pids_limit: 32
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    logging:
+      driver: json-file
+      options: {max-size: "5m", max-file: "2"}
+networks:
+  link:
+    name: qq_yunzai_link
+    internal: true
+  state:
+    internal: true
+  egress:
+volumes:
+  yunzai_data: {external: true, name: qq-yunzai-addon_yunzai_data}
+  yunzai_temp: {external: true, name: qq-yunzai-addon_yunzai_temp}
+  yunzai_logs: {external: true, name: qq-yunzai-addon_yunzai_logs}
+  yunzai_config: {external: true, name: qq-yunzai-addon_yunzai_config}
+  miao_config: {external: true, name: qq-yunzai-addon_miao_config}
+  redis_data: {external: true, name: qq-yunzai-addon_redis_data}
+secrets:
+  yunzai_token:
+    file: "${PANEL_STATE_DIR:-/srv/qqbot/panel}/secrets/bridge_token"

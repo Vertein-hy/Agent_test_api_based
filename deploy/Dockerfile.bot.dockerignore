@@ -1,0 +1,10 @@
+*
+!deploy/
+!deploy/Dockerfile.bot
+!deploy/requirements.bot.txt
+!src/
+!src/qqbot/
+!src/qqbot/**
+!tools/
+!tools/data_cli.py
+**/__pycache__

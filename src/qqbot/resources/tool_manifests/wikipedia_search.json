@@ -1,0 +1,21 @@
+{
+  "capability": "read_only",
+  "function": {
+    "name": "wikipedia_search",
+    "description": "只检索中文维基百科的指定公开主题，返回至多五条来源；禁止携带私聊资料或凭据。",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

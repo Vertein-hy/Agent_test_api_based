@@ -1,0 +1,7 @@
+*
+!deploy/
+!deploy/Dockerfile.memory
+!deploy/requirements*.txt
+!src/
+!src/**
+**/__pycache__

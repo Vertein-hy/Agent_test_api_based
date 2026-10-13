@@ -1,0 +1,17 @@
+{
+  "yunzai": {
+    "repository": "https://github.com/TimeRainStarSky/Yunzai",
+    "commit": "79a79c3defd9111429cd1da2acd120f22e68aa29",
+    "archive_sha256": "65726dc87656330cf35c0350775ca571b854e3a16c80627286b9f7d6343c94a2"
+  },
+  "miao": {
+    "repository": "https://github.com/yoimiya-kokomi/miao-plugin",
+    "commit": "0771a0e827bc51dfb6c8df50d797447e1aae7ba7",
+    "archive_sha256": "d31426cf26a0231e1a295edd3223820485a7b8d0fa8efc02e6cea5ae35df3c49"
+  },
+  "node": {
+    "version": "24.8.0",
+    "source": "https://nodejs.org/dist/v24.8.0/node-v24.8.0-linux-x64.tar.xz",
+    "sha256": "2598641d188b41793930917f1a99a81c9615856b4205d408a44ab676c1acbb3d"
+  }
+}

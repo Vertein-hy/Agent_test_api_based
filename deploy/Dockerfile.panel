@@ -1,0 +1,21 @@
+FROM python:3.11-slim
+USER root
+ENV PUPPETEER_SKIP_DOWNLOAD=true PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium TZ=Asia/Shanghai
+RUN apt-get update && apt-get install -y --no-install-recommends chromium redis-server xz-utils fonts-wqy-zenhei fonts-noto-color-emoji ca-certificates python3 make g++ && rm -rf /var/lib/apt/lists/*
+COPY third_party/yunzai/vendor/node.tar.xz /tmp/node.tar.xz
+RUN echo '2598641d188b41793930917f1a99a81c9615856b4205d408a44ab676c1acbb3d  /tmp/node.tar.xz' | sha256sum -c - && tar -xJf /tmp/node.tar.xz --strip-components=1 -C /usr/local && rm /tmp/node.tar.xz && useradd -u 1000 -m node
+RUN npm install -g pnpm@10.18.3
+WORKDIR /app
+COPY third_party/yunzai/vendor/runtime/ ./
+COPY third_party/yunzai/vendor/miao-plugin/ ./plugins/miao-plugin/
+COPY bridge/yunzai/pnpm-lock.resolved.yaml ./pnpm-lock.yaml
+RUN pnpm install --frozen-lockfile
+COPY bridge/yunzai/bridge.mjs bridge/yunzai/protocol.mjs ./addon/
+RUN mkdir -p /data data temp logs config/config && cp -a config/default_config/. config/config/ && \
+    printf 'host: yunzai-redis\nport: 6379\ndb: 0\n' > config/config/redis.yaml && \
+    printf 'name: puppeteer\n' > config/config/renderer.yaml && \
+    printf 'file_watch: false\n' > config/config/bot.yaml && \
+    printf 'chromiumPath: /usr/bin/chromium\nheadless: new\nargs: [--disable-gpu, --no-sandbox, --disable-setuid-sandbox, --no-zygote]\npuppeteerTimeout: 20000\npageGotoParams: {timeout: 20000}\nuserDataDir: /tmp/chromium\n' > renderers/puppeteer/config.yaml && \
+    chown -R node:node /data data temp logs config/config plugins/miao-plugin/config
+USER node
+CMD ["node", "addon/bridge.mjs"]

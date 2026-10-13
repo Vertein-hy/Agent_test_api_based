@@ -1,0 +1,112 @@
+name: qq-deepseek-bot
+services:
+  napcat:
+    image: ${NAPCAT_IMAGE:-mlikiowa/napcat-docker:latest}
+    restart: unless-stopped
+    environment:
+      NAPCAT_UID: "1000"
+      NAPCAT_GID: "1000"
+      ACCOUNT: ${QQ_ACCOUNT:-}
+    ports:
+      - "${WEBUI_BIND:-127.0.0.1}:6099:6099"
+    volumes:
+      - ${BOT_STATE_DIR:-/srv/qqbot/bot}/data/qq:/app/.config/QQ
+      - ${BOT_STATE_DIR:-/srv/qqbot/bot}/data/napcat:/app/napcat/config
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  bot:
+    build: {context: .., dockerfile: deploy/Dockerfile.bot}
+    image: ${BOT_IMAGE:-qqbot:local}
+    restart: unless-stopped
+    depends_on: [napcat, plugins]
+    networks: [default, plugin_link, yunzai_link, memory_link]
+    environment:
+      ONEBOT_WS_URL: ws://napcat:3001
+      ONEBOT_HTTP_URL: http://napcat:3000
+      ONEBOT_TOKEN_FILE: /run/secrets/onebot_token
+      DEEPSEEK_API_KEY_FILE: /run/secrets/deepseek_api_key
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-flash}
+      DEEPSEEK_THINKING: ${DEEPSEEK_THINKING:-disabled}
+      DEEPSEEK_REASONING_EFFORT: ${DEEPSEEK_REASONING_EFFORT:-high}
+      ARCHIVE_PATH: /app/archive/conversations.sqlite3
+      ARCHIVE_SALT_FILE: /run/secrets/archive_salt
+      ARCHIVE_DEFAULT_CAPTURE: ${ARCHIVE_DEFAULT_CAPTURE:-1}
+      PLUGIN_RUNNER_URL: http://plugins:8081
+      PLUGIN_TOKEN_FILE: /run/secrets/plugin_token
+      ENABLED_PLUGINS: ${ENABLED_PLUGINS:-web_search,web_read,current_time}
+      ALLOWED_USERS: ${ALLOWED_USERS:-}
+      ALLOWED_GROUPS: ${ALLOWED_GROUPS:-}
+      SYSTEM_PROMPT: ${SYSTEM_PROMPT:-}
+      YUNZAI_ENABLED: ${YUNZAI_ENABLED:-1}
+      YUNZAI_BRIDGE_URL: http://yunzai-bridge:8082
+      YUNZAI_TOKEN_FILE: /run/secrets/yunzai_token
+      MEMORY_ENABLED: ${MEMORY_ENABLED:-1}
+      MEMORY_URL: http://memory-service:8083
+      MEMORY_TOKEN_FILE: /run/secrets/memory_token
+      MEMORY_OUTBOX: /app/memory-outbox/outbox.sqlite3
+      SOCIAL_ENABLED: ${SOCIAL_ENABLED:-0}
+      SOCIAL_ADMINS: ${SOCIAL_ADMINS:-}
+      SOCIAL_VISIBILITY: ${SOCIAL_VISIBILITY:-4}
+      SOCIAL_REPLIES: ${SOCIAL_REPLIES:-1}
+      SOCIAL_REPOSTS: ${SOCIAL_REPOSTS:-1}
+      SOCIAL_PATH: /app/archive/social.sqlite3
+    volumes:
+      - ${BOT_STATE_DIR:-/srv/qqbot/bot}/data/archive:/app/archive
+      - memory_outbox:/app/memory-outbox
+    secrets: [deepseek_api_key, onebot_token, archive_salt, plugin_token, yunzai_token, memory_token]
+    mem_limit: 512m
+    pids_limit: 128
+    read_only: true
+    tmpfs: ["/tmp:size=32m,noexec,nosuid,nodev"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  plugins:
+    image: ${BOT_IMAGE:-qqbot:local}
+    command: ["python", "-m", "qqbot.tools.server"]
+    restart: unless-stopped
+    networks: [plugin_link, research_egress]
+    environment:
+      PLUGIN_TOKEN_FILE: /run/secrets/plugin_token
+      ENABLED_PLUGINS: ${ENABLED_PLUGINS:-web_search,web_read,current_time}
+      READ_ALLOWED_DOMAINS: ${READ_ALLOWED_DOMAINS:-api-docs.deepseek.com,www.deepseek.com,docs.python.org,www.python.org,github.com,zh.wikipedia.org,en.wikipedia.org}
+    secrets: [plugin_token]
+    read_only: true
+    tmpfs: ["/tmp:size=32m,noexec,nosuid,nodev"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    pids_limit: 64
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+networks:
+  yunzai_link: {external: true, name: qq_yunzai_link}
+  memory_link: {external: true, name: qq_memory_link}
+  plugin_link:
+    internal: true
+  research_egress:
+secrets:
+  deepseek_api_key:
+    file: ${BOT_STATE_DIR:-/srv/qqbot/bot}/secrets/deepseek_api_key
+  onebot_token:
+    file: ${BOT_STATE_DIR:-/srv/qqbot/bot}/secrets/onebot_token
+  archive_salt:
+    file: ${BOT_STATE_DIR:-/srv/qqbot/bot}/secrets/archive_salt
+  plugin_token:
+    file: ${BOT_STATE_DIR:-/srv/qqbot/bot}/secrets/plugin_token
+  yunzai_token:
+    file: ${PANEL_STATE_DIR:-/srv/qqbot/panel}/secrets/bridge_token
+  memory_token:
+    file: ${MEMORY_STATE_DIR:-/srv/qqbot/memory}/secrets/memory_token
+volumes:
+  memory_outbox: {external: true, name: qq_memory_outbox}

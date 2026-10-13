@@ -1,0 +1,22 @@
+{
+  "capability": "read_only",
+  "module": "web_search",
+  "function": {
+    "name": "web_search",
+    "description": "按必要关键词检索公开网页，返回候选摘要与真实来源。不得发送聊天记录、个人资料或凭据。摘要不代表正文已经核验，检索时间不能代替发表时间。",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

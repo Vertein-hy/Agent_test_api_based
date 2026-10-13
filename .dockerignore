@@ -1,0 +1,14 @@
+*
+!deploy/
+!deploy/Dockerfile.*
+!deploy/requirements*.txt
+!src/
+!src/**
+!bridge/
+!bridge/yunzai/
+!bridge/yunzai/**
+**/__pycache__
+**/.git
+**/node_modules
+!tools/
+!tools/data_cli.py

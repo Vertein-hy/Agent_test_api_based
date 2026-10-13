@@ -1,0 +1,14 @@
+# Default is a reproducible clean build. A same-version dependency image may be
+# passed during migration to reuse CPU model libraries without redownloading.
+ARG MEMORY_BASE=python:3.11-slim
+FROM ${MEMORY_BASE}
+USER root
+WORKDIR /app
+COPY deploy/requirements*.txt ./deploy/
+RUN pip install --no-cache-dir torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir -r deploy/requirements.memory.txt
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONPATH=/app/src TOKENIZERS_PARALLELISM=false OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 HF_HOME=/tmp/huggingface HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
+RUN rm -rf /memory/service /app/bot.py /app/archive.py /app/style.py /app/plugins.py /app/plugin_runner.py /app/data_cli.py /app/persona.txt /app/plugin_modules /app/plugin_manifests /app/requirements.txt && mkdir -p /data /models && chown -R 1000:1000 /data /models
+COPY src ./src
+USER 1000:1000
+CMD ["python", "-m", "qqmemory.app"]

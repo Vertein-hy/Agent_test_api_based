@@ -1,0 +1,13 @@
+ARG BOT_BASE=python:3.11-slim
+FROM ${BOT_BASE}
+USER root
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONPATH=/app/src
+WORKDIR /app
+COPY deploy/requirements.bot.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && (id -u bot >/dev/null 2>&1 || useradd -u 1000 -m bot) \
+    && rm -rf /app/src/qqbot
+COPY src/qqbot ./src/qqbot
+COPY tools/data_cli.py ./tools/data_cli.py
+USER 1000:1000
+CMD ["python", "-m", "qqbot"]

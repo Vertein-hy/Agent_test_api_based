@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qq-conversation-bot"
+version = "1.0.0"
+requires-python = ">=3.11"
+dependencies = ["aiohttp==3.14.3"]
+
+[project.scripts]
+qqbot = "qqbot.__main__:main"
+qqmemory = "qqmemory.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+qqbot = ["resources/default_prompt.txt", "resources/tool_manifests/*.json"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

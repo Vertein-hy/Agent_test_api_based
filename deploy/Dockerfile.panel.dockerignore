@@ -1,0 +1,13 @@
+*
+!deploy/
+!deploy/Dockerfile.panel
+!bridge/
+!bridge/yunzai/
+!bridge/yunzai/**
+!third_party/
+!third_party/yunzai/
+!third_party/yunzai/vendor/
+!third_party/yunzai/vendor/**
+**/.git
+**/node_modules
+**/__pycache__
